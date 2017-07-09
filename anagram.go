@@ -4,6 +4,7 @@ import (
   "fmt"
   "os"
   "bufio"
+  "strings"
 )
 
 func checkErr(err error) {
@@ -12,40 +13,44 @@ func checkErr(err error) {
   }
 }
 
-func findWords() {
-
-}
-
-func parseDictionary(file *os.File, letter byte, words chan []string) {
+func parseDictionary(file *os.File) []string {
   var lines []string
   scanner := bufio.NewScanner(file)
   for scanner.Scan() {
-    if scanner.Bytes()[0] == letter {
-      lines = append(lines, string(scanner.Bytes()))
-    }
+     lines = append(lines, string(scanner.Bytes()))
   }
 
-  words <- lines
+  return lines
+}
+
+func findWords(text string, words []string) []string {
+  sameWord := true
+  foundWords := make([]string, 0)
+  for _, entry := range words {
+    bEntry := []byte(entry)
+    for i := range bEntry {
+        if !strings.Contains(text, strings.ToLower(string(bEntry[i]))) {
+          sameWord = false
+          break
+        }
+    }
+    if sameWord {
+      foundWords = append(foundWords, entry)
+    }
+    sameWord = true
+  }
+
+  return foundWords
 }
 
 func main() {
-  text := os.Args[1]
-  file, err := os.Open("dictionary.txt")
-  fmt.Println(file)
+  text := os.Args[2]
+  file, err := os.Open(os.Args[1])
   checkErr(err)
-  fileParts := make([]chan []string, 26)
-  fileSections := make([][]string, 26)
 
-  for i := range fileParts {
-    char := i + 97
-    go parseDictionary(file, byte(char), fileParts[i])
+  words := parseDictionary(file)
+  results := findWords(text, words)
+  for i := range results {
+    fmt.Println(results[i])
   }
-
-  for i := range fileParts {
-    fileSections[i] = <-fileParts[i]
-    fmt.Print(fileSections[i])
-  }
-
- letters := []byte(text)
- fmt.Print(letters)
 }
